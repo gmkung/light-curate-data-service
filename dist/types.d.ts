@@ -56,13 +56,54 @@ export interface Request {
     rounds: Round[];
     submissionTime: string;
 }
+export interface Evidence {
+    id: string;
+    URI: string;
+    party: string;
+    timestamp: string;
+}
+export interface EvidenceGroup {
+    id: string;
+    evidences: Evidence[];
+}
 export interface LItem {
-    __typename: string;
+    __typename?: string;
     data: string;
     itemID: string;
     disputed: boolean;
     latestRequestSubmissionTime: string;
-    metadata: LItemMetadata;
-    requests: Request[];
+    metadata: {
+        __typename?: string;
+        props: {
+            __typename?: string;
+            description: string;
+            isIdentifier: boolean;
+            label: string;
+            type: string;
+            value: string;
+        }[];
+    };
+    requests: {
+        __typename?: string;
+        challenger: string;
+        deposit: string;
+        disputeID: string;
+        disputed: boolean;
+        requester: string;
+        resolutionTime: string;
+        resolved: boolean;
+        rounds: {
+            __typename?: string;
+            amountPaidChallenger: string;
+            amountPaidRequester: string;
+            appealPeriodEnd: string;
+            appealPeriodStart: string;
+            hasPaidChallenger: boolean;
+            hasPaidRequester: boolean;
+            ruling: string;
+        }[];
+        submissionTime: string;
+        evidenceGroup: EvidenceGroup;
+    }[];
     status: string;
 }

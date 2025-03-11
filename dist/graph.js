@@ -42,6 +42,7 @@ const ITEM_FIELDS = `
     requester
     resolutionTime
     resolved
+    requestType
     rounds {
       __typename
       amountPaidChallenger
@@ -53,6 +54,15 @@ const ITEM_FIELDS = `
       ruling
     }
     submissionTime
+    evidenceGroup {
+      id
+      evidences {
+      id
+      URI
+      party
+      timestamp  
+      }
+    }
   }
   status
 `;

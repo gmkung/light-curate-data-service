@@ -60,6 +60,12 @@ export declare class LightCurateRegistry {
      */
     getChallengePeriodDurationInDays: () => Promise<number>;
     /**
+     * Gets or creates a Kleros Liquid contract instance
+     * @param arbitratorAddress The address of the Kleros Liquid arbitrator
+     * @returns The Kleros Liquid contract instance
+     */
+    private getKlerosLiquidContract;
+    /**
      * Gets the arbitration cost
      * @returns Promise resolving to the arbitration cost information
      */
@@ -141,8 +147,61 @@ export declare class LightCurateRegistry {
     /**
      * Submit evidence for an item in the registry
      * @param itemID The ID of the item which the evidence is related to
-     * @param evidenceURI A link to an evidence using its URI
+     * @param evidenceURI A link to an evidence using its IPFS URI
      * @returns Transaction hash of the evidence submission
      */
-    submitEvidence(itemID: string, evidenceURI: string): Promise<string>;
+    submitEvidence: (itemID: string, evidenceURI: string) => Promise<string>;
+    /**
+     * Gets the appeal cost for a specific item and request
+     * @param itemID The ID of the item
+     * @param requestID The ID of the request (usually 0 for new items)
+     * @returns Promise resolving to appeal cost information
+     */
+    getAppealCost: (itemID: string, requestID?: number) => Promise<{
+        requesterAppealFee: string;
+        challengerAppealFee: string;
+        requesterAppealFeeWei: string;
+        challengerAppealFeeWei: string;
+        currentRuling: number;
+    }>;
+    /**
+     * Contribute to a side in a dispute
+     * @param itemID The ID of the item
+     * @param requestID The ID of the request (usually 0 for new items)
+     * @param side The side to contribute to (1 = Requester, 2 = Challenger)
+     * @param amount Amount to contribute in ETH
+     * @returns Transaction hash of the contribution
+     */
+    contribute: (itemID: string, requestID: number | undefined, side: 1 | 2, amount: string) => Promise<string>;
+    /**
+     * Gets the current appeal funding status
+     * @param itemID The ID of the item
+     * @param requestID The ID of the request (usually 0 for new items)
+     * @returns Promise resolving to appeal funding information
+     */
+    getAppealFundingStatus: (itemID: string, requestID?: number) => Promise<{
+        requesterFunded: boolean;
+        challengerFunded: boolean;
+        requesterAmountPaid: string;
+        challengerAmountPaid: string;
+        requesterAmountPaidWei: string;
+        challengerAmountPaidWei: string;
+        requesterRemainingToFund: string;
+        challengerRemainingToFund: string;
+        requesterRemainingToFundWei: string;
+        challengerRemainingToFundWei: string;
+        appealed: boolean;
+        currentRuling: number;
+        roundIndex: number;
+    }>;
+    /**
+     * Fund an appeal for a ruling, supporting partial funding for crowdfunding
+     * @param itemID The ID of the item
+     * @param requestID The ID of the request (usually 0 for new items)
+     * @param side The side to fund the appeal for (1 = Requester, 2 = Challenger)
+     * @param amount Optional amount to contribute (if not specified, will fund the remaining required amount).
+     *               Partial amounts are allowed for crowdfunding appeals.
+     * @returns Transaction hash of the appeal funding
+     */
+    fundAppeal: (itemID: string, requestID: number | undefined, side: 1 | 2, amount?: string) => Promise<string>;
 }

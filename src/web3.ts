@@ -51,8 +51,7 @@ export class LightCurateRegistry {
       if (
         this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET
       ) {
-        rpcUrl =
-          "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+        rpcUrl = "https://rpc.ankr.com/eth";
       } else if (
         this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN
       ) {
@@ -266,6 +265,28 @@ export class LightCurateRegistry {
   };
 
   /**
+   * Gets or creates a Kleros Liquid contract instance
+   * @param arbitratorAddress The address of the Kleros Liquid arbitrator
+   * @returns The Kleros Liquid contract instance
+   */
+  private getKlerosLiquidContract = async (
+    arbitratorAddress: string
+  ): Promise<any> => {
+    const web3 = await this.getWeb3();
+
+    // Import the Kleros Liquid ABI
+    const KLEROS_LIQUID_ABI = (
+      await import("./references/KlerosLiquid/KlerosLiquid_ABI.json")
+    ).default;
+
+    // Create new contract instance
+    return new web3.eth.Contract(
+      KLEROS_LIQUID_ABI as AbiItem[],
+      arbitratorAddress
+    );
+  };
+
+  /**
    * Gets the arbitration cost
    * @returns Promise resolving to the arbitration cost information
    */
@@ -292,18 +313,12 @@ export class LightCurateRegistry {
         throw new Error("Invalid arbitrator address");
       }
 
-      if (!this.klerosLiquidInstance) {
-        const KLEROS_LIQUID_ABI = (
-          await import("./references/KlerosLiquid/KlerosLiquid_ABI.json")
-        ).default;
-        this.klerosLiquidInstance = new web3.eth.Contract(
-          KLEROS_LIQUID_ABI as AbiItem[],
-          arbitratorAddress
-        );
-      }
+      // Use the helper method to get the Kleros Liquid instance
+      const klerosLiquidInstance =
+        await this.getKlerosLiquidContract(arbitratorAddress);
 
       // Get actual arbitration cost
-      const arbitrationCostWei = await this.klerosLiquidInstance.methods
+      const arbitrationCostWei = await klerosLiquidInstance.methods
         .arbitrationCost(arbitratorExtraData)
         .call();
       if (!arbitrationCostWei) {
@@ -319,7 +334,7 @@ export class LightCurateRegistry {
       return {
         arbitrationCost,
         arbitrationCostWei: arbitrationCostWei.toString(),
-        arbitrator: this.klerosLiquidInstance,
+        arbitrator: klerosLiquidInstance,
       };
     } catch (error) {
       console.error("Error getting arbitration cost:", error);
@@ -771,10 +786,13 @@ export class LightCurateRegistry {
   /**
    * Submit evidence for an item in the registry
    * @param itemID The ID of the item which the evidence is related to
-   * @param evidenceURI A link to an evidence using its URI
+   * @param evidenceURI A link to an evidence using its IPFS URI
    * @returns Transaction hash of the evidence submission
    */
-  async submitEvidence(itemID: string, evidenceURI: string): Promise<string> {
+  submitEvidence = async (
+    itemID: string,
+    evidenceURI: string
+  ): Promise<string> => {
     if (typeof window === "undefined" || !window.ethereum) {
       throw new Error(
         "MetaMask is not installed. Please install MetaMask to continue."
@@ -840,5 +858,544 @@ export class LightCurateRegistry {
 
       throw new Error(errorMessage);
     }
-  }
+  };
+
+  /**
+   * Gets the appeal cost for a specific item and request
+   * @param itemID The ID of the item
+   * @param requestID The ID of the request (usually 0 for new items)
+   * @returns Promise resolving to appeal cost information
+   */
+  getAppealCost = async (
+    itemID: string,
+    requestID: number = 0
+  ): Promise<{
+    requesterAppealFee: string;
+    challengerAppealFee: string;
+    requesterAppealFeeWei: string;
+    challengerAppealFeeWei: string;
+    currentRuling: number;
+  }> => {
+    let web3;
+    let contract;
+    let disputeData;
+    let arbitratorAddress;
+    let disputeID;
+    let arbitratorExtraData;
+    let currentRuling;
+    let klerosLiquidInstance;
+    let arbitrationCostWei;
+
+    // Step 1: Initialize web3 and contract instances
+    try {
+      console.log(
+        `Getting appeal cost for itemID: ${itemID}, requestID: ${requestID}`
+      );
+      web3 = await this.getWeb3();
+      contract = await this.getContract();
+    } catch (error) {
+      console.error("Error initializing web3 or contract:", error);
+      throw new Error(
+        `Failed to initialize web3 or contract: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+
+    // Step 2: Get dispute data
+    try {
+      console.log(
+        `Fetching dispute data for itemID: ${itemID}, requestID: ${requestID}`
+      );
+      disputeData = await contract.methods
+        .getRequestInfo(itemID, requestID)
+        .call();
+
+      if (!disputeData.disputed) {
+        console.error("Item is not disputed", disputeData);
+        throw new Error("Item is not disputed, no appeal cost available");
+      }
+
+      // Field names corrected to match the ABI
+      arbitratorAddress = disputeData.requestArbitrator;
+      disputeID = disputeData.disputeID;
+      arbitratorExtraData = disputeData.requestArbitratorExtraData;
+      currentRuling = parseInt(disputeData.ruling);
+
+      console.log("Dispute data:", {
+        arbitratorAddress,
+        disputeID,
+        arbitratorExtraData,
+        numberOfRounds: parseInt(disputeData.numberOfRounds),
+        currentRuling,
+      });
+    } catch (error) {
+      console.error("Error getting dispute data:", error);
+      throw new Error(
+        `Failed to get dispute data: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+
+    // Step 3: Get Kleros Liquid contract instance
+    try {
+      console.log(
+        `Getting Kleros Liquid contract instance for arbitrator: ${arbitratorAddress}`
+      );
+      klerosLiquidInstance =
+        await this.getKlerosLiquidContract(arbitratorAddress);
+    } catch (error) {
+      console.error("Error getting Kleros Liquid contract:", error);
+      throw new Error(
+        `Failed to get Kleros Liquid contract: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+
+    // Step 4: Get appeal cost from arbitrator
+    try {
+      console.log(
+        `Getting appeal cost for disputeID: ${disputeID} and ${arbitratorExtraData}`
+      );
+      arbitrationCostWei = await klerosLiquidInstance.methods
+        .appealCost(disputeID, arbitratorExtraData)
+        .call();
+
+      console.log(`Appeal base cost: ${arbitrationCostWei} wei`);
+    } catch (error) {
+      console.error("Error getting appeal cost from arbitrator:", error);
+      throw new Error(
+        `Failed to get appeal cost from arbitrator: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+
+    // Step 5: Get multipliers and calculate fees
+    let loserStakeMultiplier;
+    let winnerStakeMultiplier;
+    let sharedStakeMultiplier;
+    let requesterAppealFeeWei;
+    let challengerAppealFeeWei;
+
+    try {
+      console.log("Getting stake multipliers");
+      loserStakeMultiplier = await contract.methods
+        .loserStakeMultiplier()
+        .call();
+      winnerStakeMultiplier = await contract.methods
+        .winnerStakeMultiplier()
+        .call();
+      sharedStakeMultiplier = await contract.methods
+        .sharedStakeMultiplier()
+        .call();
+
+      console.log("Stake multipliers:", {
+        loserStakeMultiplier,
+        winnerStakeMultiplier,
+        sharedStakeMultiplier,
+      });
+
+      const MULTIPLIER_DIVISOR = 10000; // 100% is 10000 in the contract
+
+      // Convert to BigInt for safe math operations with large numbers
+      const arbitrationCost = BigInt(arbitrationCostWei);
+
+      // Calculate appeal fees based on ruling
+      if (currentRuling === 0) {
+        // No ruling, use shared stake multiplier for both parties
+        const sharedMultiplier = BigInt(sharedStakeMultiplier);
+        const stake =
+          (arbitrationCost * sharedMultiplier) / BigInt(MULTIPLIER_DIVISOR);
+
+        requesterAppealFeeWei = (arbitrationCost + stake).toString();
+        challengerAppealFeeWei = (arbitrationCost + stake).toString();
+      } else if (currentRuling === 1) {
+        // Requester is winning, apply loser multiplier to challenger and winner to requester
+        const winnerMultiplier = BigInt(winnerStakeMultiplier);
+        const loserMultiplier = BigInt(loserStakeMultiplier);
+
+        const requesterStake =
+          (arbitrationCost * winnerMultiplier) / BigInt(MULTIPLIER_DIVISOR);
+        const challengerStake =
+          (arbitrationCost * loserMultiplier) / BigInt(MULTIPLIER_DIVISOR);
+
+        requesterAppealFeeWei = (arbitrationCost + requesterStake).toString();
+        challengerAppealFeeWei = (arbitrationCost + challengerStake).toString();
+      } else if (currentRuling === 2) {
+        // Challenger is winning, apply loser multiplier to requester and winner to challenger
+        const winnerMultiplier = BigInt(winnerStakeMultiplier);
+        const loserMultiplier = BigInt(loserStakeMultiplier);
+
+        const requesterStake =
+          (arbitrationCost * loserMultiplier) / BigInt(MULTIPLIER_DIVISOR);
+        const challengerStake =
+          (arbitrationCost * winnerMultiplier) / BigInt(MULTIPLIER_DIVISOR);
+
+        requesterAppealFeeWei = (arbitrationCost + requesterStake).toString();
+        challengerAppealFeeWei = (arbitrationCost + challengerStake).toString();
+      }
+
+      console.log("Calculated appeal fees:", {
+        requesterAppealFeeWei,
+        challengerAppealFeeWei,
+      });
+    } catch (error) {
+      console.error("Error calculating appeal fees:", error);
+      throw new Error(
+        `Failed to calculate appeal fees: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+
+    // Step 6: Convert Wei to ETH and return results
+    try {
+      console.log("Converting Wei to ETH");
+      const requesterAppealFee = web3.utils.fromWei(
+        requesterAppealFeeWei,
+        "ether"
+      );
+      const challengerAppealFee = web3.utils.fromWei(
+        challengerAppealFeeWei,
+        "ether"
+      );
+
+      // Ensure these variables are never undefined
+      requesterAppealFeeWei = requesterAppealFeeWei || "0";
+      challengerAppealFeeWei = challengerAppealFeeWei || "0";
+
+      console.log("Final appeal costs:", {
+        requesterAppealFee,
+        challengerAppealFee,
+        currentRuling,
+      });
+
+      return {
+        requesterAppealFee,
+        challengerAppealFee,
+        requesterAppealFeeWei,
+        challengerAppealFeeWei,
+        currentRuling,
+      };
+    } catch (error) {
+      console.error("Error converting and returning results:", error);
+      throw new Error(
+        `Failed to convert or return results: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    }
+  };
+
+  /**
+   * Contribute to a side in a dispute
+   * @param itemID The ID of the item
+   * @param requestID The ID of the request (usually 0 for new items)
+   * @param side The side to contribute to (1 = Requester, 2 = Challenger)
+   * @param amount Amount to contribute in ETH
+   * @returns Transaction hash of the contribution
+   */
+  contribute = async (
+    itemID: string,
+    requestID: number = 0,
+    side: 1 | 2,
+    amount: string
+  ): Promise<string> => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      throw new Error(
+        "MetaMask is not installed. Please install MetaMask to continue."
+      );
+    }
+
+    try {
+      // Ensure we're on the correct chain
+      await this.ensureCorrectChain();
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const from = accounts[0];
+
+      // Create Web3 instance
+      const web3 = await this.getWeb3(window.ethereum);
+      const contract = await this.getContract();
+
+      // Convert ETH amount to Wei
+      const amountWei = web3.utils.toWei(amount, "ether");
+
+      // Estimate gas and get current gas price
+      const gasEstimate = await contract.methods
+        .contribute(itemID, requestID, side)
+        .estimateGas({
+          from,
+          value: amountWei,
+        });
+      const gasPrice = await web3.eth.getGasPrice();
+
+      // Calculate gas with 20% buffer
+      const gasBigInt = BigInt(gasEstimate);
+      const gasWithBuffer = (
+        (gasBigInt * BigInt(120)) /
+        BigInt(100)
+      ).toString();
+
+      // Submit contribution transaction
+      const txReceipt = await contract.methods
+        .contribute(itemID, requestID, side)
+        .send({
+          from,
+          gas: gasWithBuffer,
+          gasPrice: gasPrice.toString(),
+          value: amountWei,
+        });
+
+      return txReceipt.transactionHash;
+    } catch (error: any) {
+      console.error("Error contributing to dispute:", error);
+
+      // Format error for user
+      let errorMessage = "Failed to contribute to dispute";
+
+      if (error.code === 4001) {
+        errorMessage = "Transaction rejected by user";
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      throw new Error(errorMessage);
+    }
+  };
+
+  /**
+   * Gets the current appeal funding status
+   * @param itemID The ID of the item
+   * @param requestID The ID of the request (usually 0 for new items)
+   * @returns Promise resolving to appeal funding information
+   */
+  getAppealFundingStatus = async (
+    itemID: string,
+    requestID: number = 0
+  ): Promise<{
+    requesterFunded: boolean;
+    challengerFunded: boolean;
+    requesterAmountPaid: string;
+    challengerAmountPaid: string;
+    requesterAmountPaidWei: string;
+    challengerAmountPaidWei: string;
+    requesterRemainingToFund: string;
+    challengerRemainingToFund: string;
+    requesterRemainingToFundWei: string;
+    challengerRemainingToFundWei: string;
+    appealed: boolean;
+    currentRuling: number;
+    roundIndex: number;
+  }> => {
+    try {
+      const web3 = await this.getWeb3();
+      const contract = await this.getContract();
+
+      // Get dispute data for the item and request
+      const disputeData = await contract.methods
+        .getRequestInfo(itemID, requestID)
+        .call();
+
+      // If the request isn't disputed, there's no appeal funding
+      if (!disputeData.disputed) {
+        throw new Error("Item is not disputed, no appeal funding available");
+      }
+
+      const numberOfRounds = parseInt(disputeData.numberOfRounds);
+      const currentRuling = parseInt(disputeData.ruling);
+
+      // Current round index (0-based, so subtract 1)
+      const roundIndex = numberOfRounds - 1;
+
+      // Get the round info for the current round
+      const roundInfo = await contract.methods
+        .getRoundInfo(itemID, requestID, roundIndex)
+        .call();
+
+      // Extract values from round info
+      const appealed = roundInfo.appealed;
+
+      // Party enum: None = 0, Requester = 1, Challenger = 2
+      const requesterAmountPaidWei = roundInfo.amountPaid[1]; // Requester = 1
+      const challengerAmountPaidWei = roundInfo.amountPaid[2]; // Challenger = 2
+
+      const requesterFunded = roundInfo.hasPaid[1]; // Requester = 1
+      const challengerFunded = roundInfo.hasPaid[2]; // Challenger = 2
+
+      // Convert Wei to ETH for display
+      const requesterAmountPaid = web3.utils.fromWei(
+        requesterAmountPaidWei,
+        "ether"
+      );
+      const challengerAmountPaid = web3.utils.fromWei(
+        challengerAmountPaidWei,
+        "ether"
+      );
+
+      // Get total appeal costs
+      const appealCosts = await this.getAppealCost(itemID, requestID);
+
+      // Calculate remaining amounts to fund
+      const requesterRemainingToFundWei =
+        BigInt(appealCosts.requesterAppealFeeWei) -
+        BigInt(requesterAmountPaidWei);
+      const challengerRemainingToFundWei =
+        BigInt(appealCosts.challengerAppealFeeWei) -
+        BigInt(challengerAmountPaidWei);
+
+      // Convert to strings, ensuring non-negative values
+      const requesterRemainingToFundWeiStr =
+        requesterRemainingToFundWei > 0
+          ? requesterRemainingToFundWei.toString()
+          : "0";
+      const challengerRemainingToFundWeiStr =
+        challengerRemainingToFundWei > 0
+          ? challengerRemainingToFundWei.toString()
+          : "0";
+
+      // Convert to ETH for display
+      const requesterRemainingToFund = web3.utils.fromWei(
+        requesterRemainingToFundWeiStr,
+        "ether"
+      );
+      const challengerRemainingToFund = web3.utils.fromWei(
+        challengerRemainingToFundWeiStr,
+        "ether"
+      );
+
+      return {
+        requesterFunded,
+        challengerFunded,
+        requesterAmountPaid,
+        challengerAmountPaid,
+        requesterAmountPaidWei,
+        challengerAmountPaidWei,
+        requesterRemainingToFund,
+        challengerRemainingToFund,
+        requesterRemainingToFundWei: requesterRemainingToFundWeiStr,
+        challengerRemainingToFundWei: challengerRemainingToFundWeiStr,
+        appealed,
+        currentRuling,
+        roundIndex,
+      };
+    } catch (error: any) {
+      console.error("Error getting appeal funding status:", error);
+      throw new Error(`Failed to get appeal funding status: ${error.message}`);
+    }
+  };
+
+  /**
+   * Fund an appeal for a ruling, supporting partial funding for crowdfunding
+   * @param itemID The ID of the item
+   * @param requestID The ID of the request (usually 0 for new items)
+   * @param side The side to fund the appeal for (1 = Requester, 2 = Challenger)
+   * @param amount Optional amount to contribute (if not specified, will fund the remaining required amount).
+   *               Partial amounts are allowed for crowdfunding appeals.
+   * @returns Transaction hash of the appeal funding
+   */
+  fundAppeal = async (
+    itemID: string,
+    requestID: number = 0,
+    side: 1 | 2,
+    amount?: string
+  ): Promise<string> => {
+    if (typeof window === "undefined" || !window.ethereum) {
+      throw new Error(
+        "MetaMask is not installed. Please install MetaMask to continue."
+      );
+    }
+
+    try {
+      // Ensure we're on the correct chain
+      await this.ensureCorrectChain();
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const from = accounts[0];
+
+      // Create Web3 instance
+      const web3 = await this.getWeb3(window.ethereum);
+      const contract = await this.getContract();
+
+      // Get current funding status
+      const fundingStatus = await this.getAppealFundingStatus(
+        itemID,
+        requestID
+      );
+
+      // Check if side is already fully funded
+      if (
+        (side === 1 && fundingStatus.requesterFunded) ||
+        (side === 2 && fundingStatus.challengerFunded)
+      ) {
+        throw new Error(`Appeal for this side is already fully funded`);
+      }
+
+      // Determine amount to send
+      let amountToSendWei: string;
+
+      if (amount) {
+        // User specified amount
+        amountToSendWei = web3.utils.toWei(amount, "ether");
+
+        // Get the remaining amount needed
+        const remainingNeededWei =
+          side === 1
+            ? fundingStatus.requesterRemainingToFundWei
+            : fundingStatus.challengerRemainingToFundWei;
+
+        // Check if user is trying to contribute more than needed
+        if (BigInt(amountToSendWei) > BigInt(remainingNeededWei)) {
+          amountToSendWei = remainingNeededWei;
+        }
+      } else {
+        // Auto-calculate amount - send only what's remaining to fund
+        amountToSendWei =
+          side === 1
+            ? fundingStatus.requesterRemainingToFundWei
+            : fundingStatus.challengerRemainingToFundWei;
+      }
+
+      // If amount is 0, the appeal is already fully funded
+      if (amountToSendWei === "0") {
+        throw new Error(`This side of the appeal is already fully funded`);
+      }
+
+      // Estimate gas and get current gas price
+      const gasEstimate = await contract.methods
+        .fundAppeal(itemID, requestID, side)
+        .estimateGas({
+          from,
+          value: amountToSendWei,
+        });
+      const gasPrice = await web3.eth.getGasPrice();
+
+      // Calculate gas with 20% buffer
+      const gasBigInt = BigInt(gasEstimate);
+      const gasWithBuffer = (
+        (gasBigInt * BigInt(120)) /
+        BigInt(100)
+      ).toString();
+
+      // Submit fund appeal transaction
+      const txReceipt = await contract.methods
+        .fundAppeal(itemID, requestID, side)
+        .send({
+          from,
+          gas: gasWithBuffer,
+          gasPrice: gasPrice.toString(),
+          value: amountToSendWei,
+        });
+
+      return txReceipt.transactionHash;
+    } catch (error: any) {
+      console.error("Error funding appeal:", error);
+
+      // Format error for user
+      let errorMessage = "Failed to fund appeal";
+
+      if (error.code === 4001) {
+        errorMessage = "Transaction rejected by user";
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      throw new Error(errorMessage);
+    }
+  };
 }
