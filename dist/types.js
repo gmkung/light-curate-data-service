@@ -9,4 +9,3 @@ var ItemStatus;
     ItemStatus[ItemStatus["RegistrationRequested"] = 2] = "RegistrationRequested";
     ItemStatus[ItemStatus["ClearingRequested"] = 3] = "ClearingRequested";
 })(ItemStatus || (exports.ItemStatus = ItemStatus = {}));
-// Add more types as needed... 

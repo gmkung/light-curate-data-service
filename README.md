@@ -21,7 +21,11 @@ The package exports the following:
 ### Main Class
 
 ```typescript
-import { LightCurateRegistry, SUPPORTED_CHAINS, SupportedChainId } from "light-curate-data-service";
+import {
+  LightCurateRegistry,
+  SUPPORTED_CHAINS,
+  SupportedChainId,
+} from "light-curate-data-service";
 
 // Initialize with contract address and chain ID
 const registry = new LightCurateRegistry(
@@ -57,10 +61,61 @@ import {
 await uploadJSONToIPFS(data);
 ```
 
+### The Graph API
+
+```typescript
+// As a namespace
+import { graph } from "light-curate-data-service";
+
+// Fetch all items from a registry
+const { items, stats } = await graph.fetchItems(
+  registryAddress,
+  SUPPORTED_CHAINS.GNOSIS_CHAIN
+);
+
+// Fetch items with progress reporting and filters
+const { items, stats } = await graph.fetchItems(
+  registryAddress,
+  SUPPORTED_CHAINS.ETHEREUM_MAINNET,
+  {
+    onProgress: ({ loaded, total }) => {
+      console.log(`Loaded ${loaded} items${total ? ` of ${total}` : ""}`);
+    },
+    forceRefresh: true, // Bypass cache
+    maxBatches: 10, // Limit number of batches
+    filters: {
+      // Apply filters
+      status: ["Registered", "ClearingRequested"],
+    },
+  }
+);
+
+// Get a single item by ID
+const item = await graph.fetchItemById(
+  registryAddress,
+  itemID,
+  SUPPORTED_CHAINS.GNOSIS_CHAIN
+);
+
+// Get items by status
+const registeredItems = await graph.fetchItemsByStatus(
+  registryAddress,
+  ["Registered"],
+  SUPPORTED_CHAINS.ETHEREUM_MAINNET
+);
+
+// Clear cache
+graph.clearItemsCache(registryAddress, SUPPORTED_CHAINS.ETHEREUM_MAINNET);
+```
+
 ### Types
 
 ```typescript
-import { ItemStatus, DepositInfo, SupportedChainId } from "light-curate-data-service";
+import {
+  ItemStatus,
+  DepositInfo,
+  SupportedChainId,
+} from "light-curate-data-service";
 
 // ItemStatus enum:
 // - Absent = 0
@@ -76,7 +131,10 @@ import { ItemStatus, DepositInfo, SupportedChainId } from "light-curate-data-ser
 ### Using LightCurateRegistry
 
 ```typescript
-import { LightCurateRegistry, SUPPORTED_CHAINS } from "light-curate-data-service";
+import {
+  LightCurateRegistry,
+  SUPPORTED_CHAINS,
+} from "light-curate-data-service";
 
 // Initialize with contract address and chain ID
 const registry = new LightCurateRegistry(
@@ -143,6 +201,65 @@ const ipfsPath = await uploadJSONToIPFS({
 const data = await fetchFromIPFS(ipfsPath);
 ```
 
+### Using The Graph API
+
+```typescript
+import { graph, SUPPORTED_CHAINS } from "light-curate-data-service";
+
+// Fetch all items from a registry with pagination and caching
+async function loadRegistryItems(registryAddress) {
+  const { items, stats } = await graph.fetchItems(
+    registryAddress,
+    SUPPORTED_CHAINS.GNOSIS_CHAIN,
+    {
+      onProgress: ({ loaded, total }) => {
+        // Update UI with progress
+        updateLoadingProgress(loaded, total);
+      },
+      maxBatches: 10, // Limit number of batches for faster initial load
+    }
+  );
+
+  console.log(`Loaded ${items.length} items in ${stats.batches} batches`);
+  return items;
+}
+
+// Search for specific items by ID
+async function findItemById(registryAddress, itemId) {
+  const item = await graph.fetchItemById(
+    registryAddress,
+    itemId,
+    SUPPORTED_CHAINS.GNOSIS_CHAIN
+  );
+
+  if (item) {
+    console.log(`Found item: ${item.itemID}`);
+    return item;
+  } else {
+    console.log("Item not found");
+    return null;
+  }
+}
+
+// Filter items by status
+async function getItemsByStatus(registryAddress, status) {
+  const filteredItems = await graph.fetchItemsByStatus(
+    registryAddress,
+    status,
+    SUPPORTED_CHAINS.GNOSIS_CHAIN
+  );
+
+  console.log(`Found ${filteredItems.length} items with status: ${status}`);
+  return filteredItems;
+}
+
+// Clear cache when data might be stale
+function refreshData(registryAddress) {
+  graph.clearItemsCache(registryAddress, SUPPORTED_CHAINS.GNOSIS_CHAIN);
+  return loadRegistryItems(registryAddress);
+}
+```
+
 ## Supported Chains
 
 The library currently supports the following chains:
@@ -182,6 +299,19 @@ These are exposed as constants via the `SUPPORTED_CHAINS` object and as a TypeSc
 #### Error Handling
 
 - `handleWeb3Error(error)`: Formats Web3 errors for user display
+
+### The Graph API Methods
+
+#### Data Fetching
+
+- `fetchItems(registryAddress, chainId, options)`: Fetches all items with pagination and caching
+- `fetchItemsBatch(registryAddress, chainId, lastTimestamp, customSubgraphUrl, signal, filters)`: Fetches a single batch of items
+- `fetchItemById(registryAddress, itemID, chainId, options)`: Fetches a single item by ID
+- `fetchItemsByStatus(registryAddress, status, chainId, options)`: Fetches items by status
+
+#### Cache Management
+
+- `clearItemsCache(registryAddress, chainId, filters)`: Clears cache entries matching the parameters
 
 ## Documentation
 

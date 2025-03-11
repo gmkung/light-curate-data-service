@@ -37,18 +37,22 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SUPPORTED_CHAINS = exports.fetchFromIPFS = exports.uploadJSONToIPFS = exports.uploadToIPFS = exports.ipfs = exports.LightCurateRegistry = void 0;
+exports.SUPPORTED_CHAINS = exports.clearItemsCache = exports.fetchItemsByStatus = exports.fetchItemsById = exports.fetchItems = exports.fetchFromIPFS = exports.uploadJSONToIPFS = exports.uploadToIPFS = exports.graph = exports.ipfs = exports.LightCurateRegistry = void 0;
 const klerosIpfsUtils = __importStar(require("./ipfs"));
 const web3_1 = require("./web3");
 Object.defineProperty(exports, "LightCurateRegistry", { enumerable: true, get: function () { return web3_1.LightCurateRegistry; } });
+const graphUtils = __importStar(require("./graph"));
 // Export IPFS utilities
 exports.ipfs = klerosIpfsUtils;
+// Export Graph utilities
+exports.graph = graphUtils;
 // Re-export specific functions for convenience
 exports.uploadToIPFS = klerosIpfsUtils.uploadToIPFS, exports.uploadJSONToIPFS = klerosIpfsUtils.uploadJSONToIPFS, exports.fetchFromIPFS = klerosIpfsUtils.fetchFromIPFS;
+exports.fetchItems = graphUtils.fetchItems, exports.fetchItemsById = graphUtils.fetchItemsById, exports.fetchItemsByStatus = graphUtils.fetchItemsByStatus, exports.clearItemsCache = graphUtils.clearItemsCache;
 // Export constants
 exports.SUPPORTED_CHAINS = {
     ETHEREUM_MAINNET: 1,
-    GNOSIS_CHAIN: 100
+    GNOSIS_CHAIN: 100,
 };
 // Export types
 __exportStar(require("./types"), exports);

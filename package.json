@@ -1,6 +1,6 @@
 {
   "name": "light-curate-data-service",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A TypeScript library for interacting with LightGeneralizedTCR contracts",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
