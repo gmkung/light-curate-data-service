@@ -13,11 +13,11 @@ export class LightCurateRegistry {
   private web3Instance: any = null;
   private contractInstance: any = null;
   private klerosLiquidInstance: any = null;
-  
+
   // Supported chain IDs
   private static readonly SUPPORTED_CHAINS = {
     ETHEREUM_MAINNET: 1,
-    GNOSIS_CHAIN: 100
+    GNOSIS_CHAIN: 100,
   } as const;
 
   /**
@@ -26,10 +26,14 @@ export class LightCurateRegistry {
    * @param chainId The chain ID (1 for Ethereum Mainnet, 100 for Gnosis Chain)
    */
   constructor(contractAddress: string, chainId: SupportedChainId) {
-    if (!Object.values(LightCurateRegistry.SUPPORTED_CHAINS).includes(chainId)) {
-      throw new Error(`Unsupported chain ID: ${chainId}. Supported chains are: ${Object.values(LightCurateRegistry.SUPPORTED_CHAINS).join(", ")}`);
+    if (
+      !Object.values(LightCurateRegistry.SUPPORTED_CHAINS).includes(chainId)
+    ) {
+      throw new Error(
+        `Unsupported chain ID: ${chainId}. Supported chains are: ${Object.values(LightCurateRegistry.SUPPORTED_CHAINS).join(", ")}`
+      );
     }
-    
+
     this.contractAddress = contractAddress;
     this.chainId = chainId;
   }
@@ -42,20 +46,25 @@ export class LightCurateRegistry {
   private getWeb3 = async (provider?: any): Promise<any> => {
     if (!this.web3Instance) {
       const Web3 = (await import("web3")).default;
-      
+
       let rpcUrl;
-      if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET) {
-        rpcUrl = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
-      } else if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN) {
+      if (
+        this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET
+      ) {
+        rpcUrl =
+          "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+      } else if (
+        this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN
+      ) {
         rpcUrl = "https://gnosis-pokt.nodies.app";
       } else {
-        throw new Error(`Unsupported chain ID: ${this.chainId}. Supported chains are: ${Object.values(LightCurateRegistry.SUPPORTED_CHAINS).join(", ")}`);
+        throw new Error(
+          `Unsupported chain ID: ${this.chainId}. Supported chains are: ${Object.values(LightCurateRegistry.SUPPORTED_CHAINS).join(", ")}`
+        );
       }
-      
+
       this.web3Instance = new Web3(
-        provider ||
-          (typeof window !== "undefined" && window.ethereum) ||
-          rpcUrl
+        provider || (typeof window !== "undefined" && window.ethereum) || rpcUrl
       );
     }
     return this.web3Instance;
@@ -96,10 +105,10 @@ export class LightCurateRegistry {
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
-      
+
       // Then ensure we're on the correct chain
       await this.ensureCorrectChain();
-      
+
       return accounts[0];
     } catch (error: any) {
       console.error("Error connecting wallet:", error);
@@ -120,14 +129,14 @@ export class LightCurateRegistry {
       const currentChainId = await window.ethereum.request({
         method: "eth_chainId",
       });
-      
+
       // Convert hex chainId to number
       const currentChainIdNumber = parseInt(currentChainId, 16);
-      
+
       // If we're not on the correct chain, try to switch
       if (currentChainIdNumber !== this.chainId) {
         const chainIdHex = `0x${this.chainId.toString(16)}`;
-        
+
         try {
           await window.ethereum.request({
             method: "wallet_switchEthereumChain",
@@ -144,7 +153,9 @@ export class LightCurateRegistry {
       }
     } catch (error: any) {
       console.error("Error ensuring correct chain:", error);
-      throw new Error(`Please switch to ${this.getChainName()}: ${error.message}`);
+      throw new Error(
+        `Please switch to ${this.getChainName()}: ${error.message}`
+      );
     }
   };
 
@@ -155,7 +166,7 @@ export class LightCurateRegistry {
     if (typeof window === "undefined" || !window.ethereum) return;
 
     const chainParams = this.getChainParameters();
-    
+
     await window.ethereum.request({
       method: "wallet_addEthereumChain",
       params: [chainParams],
@@ -166,7 +177,9 @@ export class LightCurateRegistry {
    * Gets the chain parameters for adding to wallet
    */
   private getChainParameters = (): any => {
-    if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET) {
+    if (
+      this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET
+    ) {
       return {
         chainId: "0x1",
         chainName: "Ethereum Mainnet",
@@ -175,10 +188,14 @@ export class LightCurateRegistry {
           symbol: "ETH",
           decimals: 18,
         },
-        rpcUrls: ["https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"],
+        rpcUrls: [
+          "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+        ],
         blockExplorerUrls: ["https://etherscan.io"],
       };
-    } else if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN) {
+    } else if (
+      this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN
+    ) {
       return {
         chainId: "0x64",
         chainName: "Gnosis Chain",
@@ -191,7 +208,7 @@ export class LightCurateRegistry {
         blockExplorerUrls: ["https://gnosisscan.io"],
       };
     }
-    
+
     throw new Error("Unsupported chain ID");
   };
 
@@ -199,7 +216,10 @@ export class LightCurateRegistry {
    * Gets the chain name based on chain ID
    */
   private getChainName = (): string => {
-    return this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET ? "Ethereum Mainnet" : "Gnosis Chain";
+    return this.chainId ===
+      LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET
+      ? "Ethereum Mainnet"
+      : "Gnosis Chain";
   };
 
   /**
@@ -397,10 +417,7 @@ export class LightCurateRegistry {
    * @returns Promise resolving to deposit information
    */
   getRemovalDepositAmount = async (): Promise<DepositInfo> => {
-    return this.calculateDepositAmount(
-      "removalBaseDeposit", 
-      "removal deposit"
-    );
+    return this.calculateDepositAmount("removalBaseDeposit", "removal deposit");
   };
 
   /**
@@ -434,7 +451,7 @@ export class LightCurateRegistry {
     try {
       // Ensure we're on the correct chain
       await this.ensureCorrectChain();
-      
+
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -497,7 +514,10 @@ export class LightCurateRegistry {
    * @param evidence Optional evidence IPFS path
    * @returns Promise resolving to the transaction hash
    */
-  removeItem = async (itemID: string, evidence: string = ""): Promise<string> => {
+  removeItem = async (
+    itemID: string,
+    evidence: string = ""
+  ): Promise<string> => {
     if (typeof window === "undefined" || !window.ethereum) {
       throw new Error(
         "MetaMask is not installed. Please install MetaMask to continue."
@@ -507,7 +527,7 @@ export class LightCurateRegistry {
     try {
       // Ensure we're on the correct chain
       await this.ensureCorrectChain();
-      
+
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -592,7 +612,7 @@ export class LightCurateRegistry {
     try {
       // Ensure we're on the correct chain
       await this.ensureCorrectChain();
-      
+
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
       });
@@ -739,7 +759,7 @@ export class LightCurateRegistry {
       return false;
     }
   };
-  
+
   /**
    * Gets the current chain ID
    * @returns The chain ID
@@ -747,4 +767,78 @@ export class LightCurateRegistry {
   getChainId = (): number => {
     return this.chainId;
   };
+
+  /**
+   * Submit evidence for an item in the registry
+   * @param itemID The ID of the item which the evidence is related to
+   * @param evidenceURI A link to an evidence using its URI
+   * @returns Transaction hash of the evidence submission
+   */
+  async submitEvidence(itemID: string, evidenceURI: string): Promise<string> {
+    if (typeof window === "undefined" || !window.ethereum) {
+      throw new Error(
+        "MetaMask is not installed. Please install MetaMask to continue."
+      );
+    }
+
+    try {
+      // Ensure we're on the correct chain
+      await this.ensureCorrectChain();
+
+      const accounts = await window.ethereum.request({
+        method: "eth_requestAccounts",
+      });
+      const from = accounts[0];
+
+      // Create Web3 instance
+      const web3 = await this.getWeb3(window.ethereum);
+      const contract = await this.getContract();
+
+      // Format evidence URI - ensure it starts with "/ipfs/"
+      const formattedEvidence = evidenceURI
+        ? evidenceURI.startsWith("/ipfs/")
+          ? evidenceURI
+          : `/ipfs/${evidenceURI}`
+        : "";
+
+      // Estimate gas and get current gas price
+      const gasEstimate = await contract.methods
+        .submitEvidence(itemID, formattedEvidence)
+        .estimateGas({
+          from,
+        });
+      const gasPrice = await web3.eth.getGasPrice();
+
+      // Calculate gas with 20% buffer
+      const gasBigInt = BigInt(gasEstimate);
+      const gasWithBuffer = (
+        (gasBigInt * BigInt(120)) /
+        BigInt(100)
+      ).toString();
+
+      // Submit transaction
+      const txReceipt = await contract.methods
+        .submitEvidence(itemID, formattedEvidence)
+        .send({
+          from,
+          gas: gasWithBuffer,
+          gasPrice: gasPrice.toString(),
+        });
+
+      return txReceipt.transactionHash;
+    } catch (error: any) {
+      console.error("Error submitting evidence:", error);
+
+      // Format error for user
+      let errorMessage = "Failed to submit evidence";
+
+      if (error.code === 4001) {
+        errorMessage = "Transaction rejected by user";
+      } else if (error.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+
+      throw new Error(errorMessage);
+    }
+  }
 }

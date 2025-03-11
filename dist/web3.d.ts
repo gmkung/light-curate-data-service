@@ -138,4 +138,11 @@ export declare class LightCurateRegistry {
      * @returns The chain ID
      */
     getChainId: () => number;
+    /**
+     * Submit evidence for an item in the registry
+     * @param itemID The ID of the item which the evidence is related to
+     * @param evidenceURI A link to an evidence using its URI
+     * @returns Transaction hash of the evidence submission
+     */
+    submitEvidence(itemID: string, evidenceURI: string): Promise<string>;
 }

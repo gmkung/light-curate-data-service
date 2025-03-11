@@ -60,7 +60,8 @@ class LightCurateRegistry {
                 const Web3 = (await Promise.resolve().then(() => __importStar(require("web3")))).default;
                 let rpcUrl;
                 if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET) {
-                    rpcUrl = "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
+                    rpcUrl =
+                        "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161";
                 }
                 else if (this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.GNOSIS_CHAIN) {
                     rpcUrl = "https://gnosis-pokt.nodies.app";
@@ -68,9 +69,7 @@ class LightCurateRegistry {
                 else {
                     throw new Error(`Unsupported chain ID: ${this.chainId}. Supported chains are: ${Object.values(LightCurateRegistry.SUPPORTED_CHAINS).join(", ")}`);
                 }
-                this.web3Instance = new Web3(provider ||
-                    (typeof window !== "undefined" && window.ethereum) ||
-                    rpcUrl);
+                this.web3Instance = new Web3(provider || (typeof window !== "undefined" && window.ethereum) || rpcUrl);
             }
             return this.web3Instance;
         };
@@ -172,7 +171,9 @@ class LightCurateRegistry {
                         symbol: "ETH",
                         decimals: 18,
                     },
-                    rpcUrls: ["https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"],
+                    rpcUrls: [
+                        "https://mainnet.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+                    ],
                     blockExplorerUrls: ["https://etherscan.io"],
                 };
             }
@@ -195,7 +196,10 @@ class LightCurateRegistry {
          * Gets the chain name based on chain ID
          */
         this.getChainName = () => {
-            return this.chainId === LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET ? "Ethereum Mainnet" : "Gnosis Chain";
+            return this.chainId ===
+                LightCurateRegistry.SUPPORTED_CHAINS.ETHEREUM_MAINNET
+                ? "Ethereum Mainnet"
+                : "Gnosis Chain";
         };
         /**
          * Gets the currently connected account
@@ -630,10 +634,70 @@ class LightCurateRegistry {
         this.contractAddress = contractAddress;
         this.chainId = chainId;
     }
+    /**
+     * Submit evidence for an item in the registry
+     * @param itemID The ID of the item which the evidence is related to
+     * @param evidenceURI A link to an evidence using its URI
+     * @returns Transaction hash of the evidence submission
+     */
+    async submitEvidence(itemID, evidenceURI) {
+        if (typeof window === "undefined" || !window.ethereum) {
+            throw new Error("MetaMask is not installed. Please install MetaMask to continue.");
+        }
+        try {
+            // Ensure we're on the correct chain
+            await this.ensureCorrectChain();
+            const accounts = await window.ethereum.request({
+                method: "eth_requestAccounts",
+            });
+            const from = accounts[0];
+            // Create Web3 instance
+            const web3 = await this.getWeb3(window.ethereum);
+            const contract = await this.getContract();
+            // Format evidence URI - ensure it starts with "/ipfs/"
+            const formattedEvidence = evidenceURI
+                ? evidenceURI.startsWith("/ipfs/")
+                    ? evidenceURI
+                    : `/ipfs/${evidenceURI}`
+                : "";
+            // Estimate gas and get current gas price
+            const gasEstimate = await contract.methods
+                .submitEvidence(itemID, formattedEvidence)
+                .estimateGas({
+                from,
+            });
+            const gasPrice = await web3.eth.getGasPrice();
+            // Calculate gas with 20% buffer
+            const gasBigInt = BigInt(gasEstimate);
+            const gasWithBuffer = ((gasBigInt * BigInt(120)) /
+                BigInt(100)).toString();
+            // Submit transaction
+            const txReceipt = await contract.methods
+                .submitEvidence(itemID, formattedEvidence)
+                .send({
+                from,
+                gas: gasWithBuffer,
+                gasPrice: gasPrice.toString(),
+            });
+            return txReceipt.transactionHash;
+        }
+        catch (error) {
+            console.error("Error submitting evidence:", error);
+            // Format error for user
+            let errorMessage = "Failed to submit evidence";
+            if (error.code === 4001) {
+                errorMessage = "Transaction rejected by user";
+            }
+            else if (error.message) {
+                errorMessage = `Error: ${error.message}`;
+            }
+            throw new Error(errorMessage);
+        }
+    }
 }
 exports.LightCurateRegistry = LightCurateRegistry;
 // Supported chain IDs
 LightCurateRegistry.SUPPORTED_CHAINS = {
     ETHEREUM_MAINNET: 1,
-    GNOSIS_CHAIN: 100
+    GNOSIS_CHAIN: 100,
 };
