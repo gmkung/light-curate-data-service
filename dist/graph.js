@@ -45,6 +45,7 @@ const ITEM_FIELDS = `
     requestType
     rounds {
       __typename
+      appealed
       amountPaidChallenger
       amountPaidRequester
       appealPeriodEnd

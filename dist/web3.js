@@ -743,7 +743,7 @@ class LightCurateRegistry {
                     disputeID,
                     arbitratorExtraData,
                     numberOfRounds: parseInt(disputeData.numberOfRounds),
-                    currentRuling
+                    currentRuling,
                 });
             }
             catch (error) {
@@ -753,7 +753,8 @@ class LightCurateRegistry {
             // Step 3: Get Kleros Liquid contract instance
             try {
                 console.log(`Getting Kleros Liquid contract instance for arbitrator: ${arbitratorAddress}`);
-                klerosLiquidInstance = await this.getKlerosLiquidContract(arbitratorAddress);
+                klerosLiquidInstance =
+                    await this.getKlerosLiquidContract(arbitratorAddress);
             }
             catch (error) {
                 console.error("Error getting Kleros Liquid contract:", error);
@@ -779,13 +780,19 @@ class LightCurateRegistry {
             let challengerAppealFeeWei;
             try {
                 console.log("Getting stake multipliers");
-                loserStakeMultiplier = await contract.methods.loserStakeMultiplier().call();
-                winnerStakeMultiplier = await contract.methods.winnerStakeMultiplier().call();
-                sharedStakeMultiplier = await contract.methods.sharedStakeMultiplier().call();
+                loserStakeMultiplier = await contract.methods
+                    .loserStakeMultiplier()
+                    .call();
+                winnerStakeMultiplier = await contract.methods
+                    .winnerStakeMultiplier()
+                    .call();
+                sharedStakeMultiplier = await contract.methods
+                    .sharedStakeMultiplier()
+                    .call();
                 console.log("Stake multipliers:", {
                     loserStakeMultiplier,
                     winnerStakeMultiplier,
-                    sharedStakeMultiplier
+                    sharedStakeMultiplier,
                 });
                 const MULTIPLIER_DIVISOR = 10000; // 100% is 10000 in the contract
                 // Convert to BigInt for safe math operations with large numbers
@@ -818,7 +825,7 @@ class LightCurateRegistry {
                 }
                 console.log("Calculated appeal fees:", {
                     requesterAppealFeeWei,
-                    challengerAppealFeeWei
+                    challengerAppealFeeWei,
                 });
             }
             catch (error) {
@@ -836,7 +843,7 @@ class LightCurateRegistry {
                 console.log("Final appeal costs:", {
                     requesterAppealFee,
                     challengerAppealFee,
-                    currentRuling
+                    currentRuling,
                 });
                 return {
                     requesterAppealFee,

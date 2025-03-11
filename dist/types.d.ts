@@ -96,6 +96,7 @@ export interface LItem {
             __typename?: string;
             amountPaidChallenger: string;
             amountPaidRequester: string;
+            appealed: boolean;
             appealPeriodEnd: string;
             appealPeriodStart: string;
             hasPaidChallenger: boolean;

@@ -103,8 +103,14 @@ const { items, stats } = await fetchItems(
 
 // Display items in your UI
 items.forEach((item) => {
-  // Each item contains metadata.props which holds the curated information
-  // The specific meaning of these fields depends on your registry's purpose
+  // Each item.metadata.props contains an array of property objects with the structure:
+  // {
+  //   description: string;    // Description of the property
+  //   isIdentifier: boolean;  // Whether this property uniquely identifies the item
+  //   label: string;         // Display label for the property
+  //   type: string;          // Data type of the property
+  //   value: string;         // The actual value
+  // }
   const props = item.metadata.props;
 
   // Example: Display item in a card or list
@@ -116,6 +122,33 @@ items.forEach((item) => {
     timestamp: new Date(parseInt(item.latestRequestSubmissionTime) * 1000),
   });
 });
+```
+
+The `metadata.props` array contains structured data about each item in your registry. Each property object in the array follows this structure:
+- `description`: A detailed description of what the property represents
+- `isIdentifier`: Boolean flag indicating if this property uniquely identifies the item
+- `label`: Human-readable label for displaying the property
+- `type`: The data type of the property value
+- `value`: The actual value of the property
+
+For example, a registry item might have props like this:
+```typescript
+props: [
+  {
+    description: "The name of the project",
+    isIdentifier: true,
+    label: "Project Name",
+    type: "string",
+    value: "My Awesome Project"
+  },
+  {
+    description: "Project's GitHub URL",
+    isIdentifier: false,
+    label: "GitHub URL",
+    type: "url",
+    value: "https://github.com/example/project"
+  }
+]
 ```
 
 ### Item Lifecycle Management
