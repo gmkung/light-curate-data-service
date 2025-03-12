@@ -1,5 +1,11 @@
 // Define types used throughout the package
 
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
+
 export enum ItemStatus {
   Absent = 0,
   Registered = 1,

@@ -12,7 +12,6 @@ export class LightCurateRegistry {
   private chainId: SupportedChainId;
   private web3Instance: any = null;
   private contractInstance: any = null;
-  private klerosLiquidInstance: any = null;
 
   // Supported chain IDs
   private static readonly SUPPORTED_CHAINS = {
@@ -1433,11 +1432,16 @@ export class LightCurateRegistry {
       console.log(`Found ${events.length} MetaEvidence events total`);
 
       // Log all events for inspection
-      events.forEach((e: { returnValues: { _metaEvidenceID: string; _evidence: string } }, i: number) => {
-        console.log(
-          `Event ${i}: ID=${e.returnValues._metaEvidenceID}, Evidence=${e.returnValues._evidence}`
-        );
-      });
+      events.forEach(
+        (
+          e: { returnValues: { _metaEvidenceID: string; _evidence: string } },
+          i: number
+        ) => {
+          console.log(
+            `Event ${i}: ID=${e.returnValues._metaEvidenceID}, Evidence=${e.returnValues._evidence}`
+          );
+        }
+      );
 
       // Find the specific events
       console.log(
@@ -1449,7 +1453,9 @@ export class LightCurateRegistry {
           console.log(
             `Comparing: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID}) with search ID "${latestRegistrationId.toString()}" (${typeof latestRegistrationId.toString()})`
           );
-          return e.returnValues._metaEvidenceID == latestRegistrationId.toString();
+          return (
+            e.returnValues._metaEvidenceID == latestRegistrationId.toString()
+          );
         }
       );
       console.log("Registration event found:", !!registrationEvent);
@@ -1476,8 +1482,10 @@ export class LightCurateRegistry {
               console.log(
                 `Filtering: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID})`
               );
-              return e.returnValues._metaEvidenceID == "0" || 
-                     e.returnValues._metaEvidenceID == "1";
+              return (
+                e.returnValues._metaEvidenceID == "0" ||
+                e.returnValues._metaEvidenceID == "1"
+              );
             }
           );
           console.log(`Found ${firstEvents.length} initial events`);
