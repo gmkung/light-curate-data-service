@@ -75,7 +75,7 @@ Each item in the returned `items` array contains:
       appealPeriodStart: string;    // When appeal period starts (Unix timestamp)
       hasPaidChallenger: boolean;   // If challenger has fully funded appeal
       hasPaidRequester: boolean;    // If requester has fully funded appeal
-      ruling: number;               // None or 0 = No ruling yet, 1 = Accept, 2 = Reject
+      ruling: number;               // None = No ruling yet, 0 = Refuse to Arbitrate, 1 = Accept, 2 = Reject
     }]
   }
   ```
