@@ -1,3 +1,8 @@
+declare global {
+    interface Window {
+        ethereum?: any;
+    }
+}
 export declare enum ItemStatus {
     Absent = 0,
     Registered = 1,

@@ -49,7 +49,6 @@ class LightCurateRegistry {
     constructor(contractAddress, chainId) {
         this.web3Instance = null;
         this.contractInstance = null;
-        this.klerosLiquidInstance = null;
         /**
          * Gets or creates a Web3 instance
          * @param provider Optional provider to use (defaults to window.ethereum or Infura)
@@ -1117,7 +1116,7 @@ class LightCurateRegistry {
                 console.log("Looking for registration event with ID:", latestRegistrationId);
                 const registrationEvent = events.find((e) => {
                     console.log(`Comparing: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID}) with search ID "${latestRegistrationId.toString()}" (${typeof latestRegistrationId.toString()})`);
-                    return e.returnValues._metaEvidenceID == latestRegistrationId.toString();
+                    return (e.returnValues._metaEvidenceID == latestRegistrationId.toString());
                 });
                 console.log("Registration event found:", !!registrationEvent);
                 console.log("Looking for clearing event with ID:", latestClearingId);
@@ -1132,8 +1131,8 @@ class LightCurateRegistry {
                         console.log("Specific events not found. Attempting to use the first registration and clearing events...");
                         const firstEvents = events.filter((e) => {
                             console.log(`Filtering: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID})`);
-                            return e.returnValues._metaEvidenceID == "0" ||
-                                e.returnValues._metaEvidenceID == "1";
+                            return (e.returnValues._metaEvidenceID == "0" ||
+                                e.returnValues._metaEvidenceID == "1");
                         });
                         console.log(`Found ${firstEvents.length} initial events`);
                         if (firstEvents.length >= 2) {

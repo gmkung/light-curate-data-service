@@ -9,7 +9,6 @@ export declare class LightCurateRegistry {
     private chainId;
     private web3Instance;
     private contractInstance;
-    private klerosLiquidInstance;
     private static readonly SUPPORTED_CHAINS;
     /**
      * Creates a new LightCurateRegistry instance
