@@ -13,7 +13,7 @@ export const uploadToIPFS = async (
 
   try {
     const response = await fetch(
-      "https://kleros-api.netlify.app/.netlify/functions/upload-to-ipfs?operation=file&pinToGraph=false",
+      "https://kleros-api.netlify.app/.netlify/functions/upload-to-ipfs?operation=file&pinToGraph=true",
       {
         method: "POST",
         body: formdata,
@@ -47,7 +47,7 @@ export async function fetchFromIPFS(ipfsPath: string): Promise<any> {
   try {
     // Remove '/ipfs/' prefix if present
     const cleanPath = ipfsPath.replace(/^\/ipfs\//, "");
-    const url = `https://ipfs.io/ipfs/${cleanPath}`;
+    const url = `https://cdn.kleros.link/ipfs/${cleanPath}`;
 
     const response = await fetch(url);
     if (!response.ok) {
