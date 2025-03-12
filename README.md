@@ -355,7 +355,7 @@ Gets the cost to appeal a disputed item. This includes separate costs for the re
 - `challengerAppealFee`: The appeal fee for the challenger in ETH
 - `requesterAppealFeeWei`: The appeal fee for the requester in Wei
 - `challengerAppealFeeWei`: The appeal fee for the challenger in Wei
-- `currentRuling`: The current ruling (0 = None, 1 = Requester, 2 = Challenger)
+- `currentRuling`: The current ruling None = No ruling yet, 0 = Refuse to Arbitrate, 1 = Accept, 2 = Reject)
 
 **Note**: On Ethereum Mainnet (chainId=1), fees are in ETH. On Gnosis Chain (chainId=100), fees are in xDai.
 
@@ -406,7 +406,7 @@ Gets the current funding status of an appeal for a disputed item.
 - `requesterRemainingToFund`: Remaining amount needed from the requester in ETH
 - `challengerRemainingToFund`: Remaining amount needed from the challenger in ETH
 - `appealed`: Whether the appeal has been created
-- `currentRuling`: The current ruling (0 = None, 1 = Requester, 2 = Challenger)
+- `currentRuling`: The current ruling (None = No ruling yet, 0 = Refuse to Arbitrate, 1 = Accept, 2 = Reject)
 - `roundIndex`: The current round index (0-based)
 
 **Example:**
