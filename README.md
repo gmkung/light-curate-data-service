@@ -19,7 +19,10 @@ yarn add light-curate-data-service
 ### Initialize the Registry
 
 ```typescript
-import { LightCurateRegistry, SUPPORTED_CHAINS } from "light-curate-data-service";
+import {
+  LightCurateRegistry,
+  SUPPORTED_CHAINS,
+} from "light-curate-data-service";
 
 // Initialize with contract address and chain ID
 const registry = new LightCurateRegistry(
@@ -65,15 +68,27 @@ items.forEach((item) => {
 
 This section provides a comprehensive guide on how to implement a frontend for a decentralized token curated registry.
 
+### Complete User Flow
+
+1. **Browse Registry**: Users view the list of items with their status and metadata
+2. **Submit Items**: Users can submit new items to the registry
+3. **Challenge Items**: Users can challenge pending registration or removal requests
+4. **Submit Evidence**: Both parties can submit evidence to support their case
+5. **Monitor Disputes**: Users can track the status of disputed items
+6. **Appeal Rulings**: Users can fund appeals for disputes they disagree with
+7. **View Final Results**: Once resolved, items are either registered or removed
+
+This workflow creates a complete decentralized curation system where the community collectively determines what items should be included in the registry.
+
 ### Setup and Initialization
 
 Start by initializing the library with your registry address and chain ID:
 
 ```typescript
-import { 
-  LightCurateRegistry, 
-  SUPPORTED_CHAINS, 
-  fetchItems 
+import {
+  LightCurateRegistry,
+  SUPPORTED_CHAINS,
+  fetchItems,
 } from "light-curate-data-service";
 
 // Initialize with contract address and chain ID
@@ -125,6 +140,7 @@ items.forEach((item) => {
 ```
 
 The `metadata.props` array contains structured data about each item in your registry. Each property object in the array follows this structure:
+
 - `description`: A detailed description of what the property represents
 - `isIdentifier`: Boolean flag indicating if this property uniquely identifies the item
 - `label`: Human-readable label for displaying the property
@@ -132,6 +148,7 @@ The `metadata.props` array contains structured data about each item in your regi
 - `value`: The actual value of the property
 
 For example, a registry item might have props like this:
+
 ```typescript
 props: [
   {
@@ -139,33 +156,49 @@ props: [
     isIdentifier: true,
     label: "Project Name",
     type: "string",
-    value: "My Awesome Project"
+    value: "My Awesome Project",
   },
   {
     description: "Project's GitHub URL",
     isIdentifier: false,
     label: "GitHub URL",
     type: "url",
-    value: "https://github.com/example/project"
-  }
-]
+    value: "https://github.com/example/project",
+  },
+];
 ```
 
 ### Item Lifecycle Management
 
 #### 1. Submitting New Entries
 
-Allow users to submit new entries to the registry:
+When submitting new entries, the item metadata must follow the structure defined in the registry's MetaEvidence. The submission JSON should contain:
+
+1. A `columns` array matching the structure from the MetaEvidence's `metadata.columns`
+2. A `values` object containing the actual data, where keys match the column labels
+
+Example submission format:
 
 ```typescript
-// First upload metadata to IPFS
-const ipfsPath = await uploadJSONToIPFS({
-  title: "New Item",
-  description: "Description of the item",
-  // Additional metadata specific to your registry
-});
+{
+  "columns": [ /* Copy of columns array from MetaEvidence */ ],
+  "values": {
+    "Name": "Kleros Scout",
+    "Description": "The permanent IPFS-hosted decentralized interface...",
+    "Network name": "IPFS",
+    "Locator ID": "bafybeiauujhf63x7ly7hkubuwrblign7wtimx6phjob67aqz2344xrp47u",
+    "Repository URL": "https://github.com/kleros/scout",
+    "Commit hash": "14b0443",
+    "Version tag (optional)": "",
+    "Additional information (Optional)": "..."
+  }
+}
+```
 
-// Then submit to the registry
+First upload this JSON to IPFS, then submit the resulting IPFS path to the registry:
+
+```typescript
+const ipfsPath = await uploadJSONToIPFS(itemMetadata);
 const txHash = await registry.submitToRegistry(ipfsPath);
 ```
 
@@ -204,18 +237,18 @@ In your item detail view, display all evidence (no need to use fetchItemsById ag
 ```typescript
 // If you need to fetch a specific item's details including evidence
 const { items } = await fetchItemsById(
-  registryAddress, 
-  [itemID], 
+  registryAddress,
+  [itemID],
   chainId
 );
 const item = items[0];
 
-// Display evidence in your UI 
+// Display evidence in your UI
 if (item.requests[0].evidenceGroup) {
   item.requests[0].evidenceGroup.evidences.forEach((evidence) => {
     // Fetch and parse evidence from IPFS
     const evidenceData = await fetchFromIPFS(evidence.URI);
-    
+
     renderEvidence({
       title: evidenceData.title,
       description: evidenceData.description,
@@ -241,17 +274,17 @@ After initial ruling, check if the dispute is appealable:
 function checkAppealStatus(item) {
   const request = item.requests[0];
   const currentRound = request.rounds[request.rounds.length - 1];
-  
+
   // Check if in appeal period and not already appealed
   const now = Math.floor(Date.now() / 1000);
   const appealPeriodStart = parseInt(currentRound.appealPeriodStart);
   const appealPeriodEnd = parseInt(currentRound.appealPeriodEnd);
-  
+
   if (
-    appealPeriodStart > 0 && 
-    appealPeriodEnd > 0 && 
-    now >= appealPeriodStart && 
-    now <= appealPeriodEnd && 
+    appealPeriodStart > 0 &&
+    appealPeriodEnd > 0 &&
+    now >= appealPeriodStart &&
+    now <= appealPeriodEnd &&
     !currentRound.appealed
   ) {
     // Show appeal UI
@@ -262,10 +295,10 @@ function checkAppealStatus(item) {
 async function showAppealInterface(itemID) {
   // Get appeal costs
   const appealCost = await registry.getAppealCost(itemID);
-  
+
   // Get funding status
   const fundingStatus = await registry.getAppealFundingStatus(itemID);
-  
+
   // Render appeal UI with this information
   renderAppealUI({
     itemID,
@@ -280,7 +313,7 @@ async function fundAppeal(itemID, side, amount) {
   try {
     const txHash = await registry.fundAppeal(itemID, 0, side, amount);
     showSuccess(`Appeal funded! Transaction: ${txHash}`);
-    
+
     // Refresh funding status
     const newStatus = await registry.getAppealFundingStatus(itemID);
     updateAppealUI(newStatus);
@@ -289,18 +322,6 @@ async function fundAppeal(itemID, side, amount) {
   }
 }
 ```
-
-### Complete User Flow
-
-1. **Browse Registry**: Users view the list of items with their status and metadata
-2. **Submit Items**: Users can submit new items to the registry
-3. **Challenge Items**: Users can challenge pending registration or removal requests
-4. **Submit Evidence**: Both parties can submit evidence to support their case
-5. **Monitor Disputes**: Users can track the status of disputed items
-6. **Appeal Rulings**: Users can fund appeals for disputes they disagree with
-7. **View Final Results**: Once resolved, items are either registered or removed
-
-This workflow creates a complete decentralized curation system where the community collectively determines what items should be included in the registry.
 
 ## Appeal Functions
 
@@ -449,7 +470,7 @@ When an item is disputed in the Light Curate registry, it enters the arbitration
 1. Check if an item is disputed using `getItemInfo()`
 2. If disputed, get the appeal costs using `getAppealCost()`
 3. Check the current funding status using `getAppealFundingStatus()`
-4. Fund your side of the appeal using `fundAppeal()`
+4. Fund your side of the appeal using `fundAppeal()`, and the title and description of each appeal option can be found in the registry metaevidence.
 5. Once both sides are fully funded, the appeal will be created automatically
 
 Note that appeal fees are typically higher for the side that lost the initial ruling, as determined by the stake multipliers in the contract.
@@ -462,21 +483,21 @@ Note that appeal fees are typically higher for the side that lost the initial ru
 import {
   // Main class
   LightCurateRegistry,
-  
+
   // Constants
   SUPPORTED_CHAINS,
-  
+
   // Types
   SupportedChainId,
   ItemStatus,
   DepositInfo,
-  
+
   // Graph functions
   fetchItems,
   fetchItemsById,
   fetchItemsByStatus,
   clearItemsCache,
-  
+
   // IPFS functions
   uploadToIPFS,
   uploadJSONToIPFS,
@@ -528,14 +549,82 @@ const { items: registeredItems } = await fetchItemsByStatus(
 clearItemsCache(registryAddress, SUPPORTED_CHAINS.ETHEREUM_MAINNET);
 ```
 
+### Registry MetaEvidence
+
+The registry maintains two types of MetaEvidence: one for registration requests and one for clearing requests. You can fetch the latest versions of both using:
+
+```typescript
+const { registrationMetaEvidence, clearingMetaEvidence } =
+  await registry.getLatestMetaEvidence();
+
+// These URIs point to IPFS and can be fetched using fetchFromIPFS
+const registrationMetadata = await fetchFromIPFS(registrationMetaEvidence);
+const clearingMetadata = await fetchFromIPFS(clearingMetaEvidence);
+```
+
+The MetaEvidence contains important information about how items should be curated in your registry, including:
+
+- Display metadata for the submission form
+- Rules and guidelines for curators
+- Required fields and validation criteria
+- Dispute resolution parameters
+
+The MetaEvidence JSON follows this structure:
+
+```typescript
+{
+  title: string;           // Title of the registry
+  description: string;     // Description of the registry's purpose
+  rulingOptions: { //Should have only 2 items per array, which can be used to describe the 2 ruling/appeal options later on
+    titles: string[];      // Options available to arbitrators/jurors/appellants.
+    descriptions: string[]; // Descriptions of each ruling option
+  };
+  category: string;        // Category of the registry
+  question: string;        // Question for arbitrators to consider
+  fileURI: string;        // IPFS URI to detailed rules/policy document
+  evidenceDisplayInterfaceURI: string; // IPFS URI to evidence display interface
+  metadata: {
+    tcrTitle: string;      // Registry title
+    tcrDescription: string; // Registry description
+    columns: {             // Defines the structure for new submissions
+      label: string;       // Display label for the field
+      description: string; // Field description
+      type: string;       // Data type (text, long text, link, etc)
+      isIdentifier?: boolean; // Whether this field uniquely identifies items
+    }[];
+    itemName: string;      // Singular name for items
+    itemNamePlural: string; // Plural name for items
+    logoURI?: string;      // IPFS URI to registry logo
+    requireRemovalEvidence: boolean;
+    isTCRofTCRs: boolean;
+    relTcrDisabled: boolean;
+  };
+}
+```
+
 ### Evidence Data Structure
 
 Each item's request includes an `evidenceGroup` containing an array of `evidences`. Evidence entries contain:
 
 - **party**: The Ethereum address that submitted the evidence
-- **URI**: The IPFS URI pointing to the JSON content of the evidence
+- **URI**: The IPFS URI in the format '/ipfs/[IPFS_CID]'. This can be passed to `fetchFromIPFS` to retrieve the evidence content, which is a JSON file containing:
+  ```typescript
+  {
+    title: string; // Title of the evidence
+    description: string; // Detailed description of the evidence
+  }
+  ```
 - **timestamp**: When the evidence was submitted
 - **id**: Unique identifier for the evidence
+
+Example of retrieving evidence content:
+
+```typescript
+// Get evidence content from IPFS
+const evidenceContent = await fetchFromIPFS(evidence.URI);
+console.log(evidenceContent.title); // "Challenge Evidence"
+console.log(evidenceContent.description); // "This submission violates rule 3..."
+```
 
 ### Supported Chains
 

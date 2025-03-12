@@ -1398,4 +1398,59 @@ export class LightCurateRegistry {
       throw new Error(errorMessage);
     }
   };
+
+  /**
+   * Gets the latest MetaEvidence URIs for both registration and clearing requests
+   * @returns Promise resolving to an object containing both MetaEvidence URIs
+   */
+  getLatestMetaEvidence = async (): Promise<{
+    registrationMetaEvidence: string;
+    clearingMetaEvidence: string;
+  }> => {
+    try {
+      // Use existing web3 instance and contract from the class
+      const web3 = await this.getWeb3();
+      const contract = await this.getContract();
+
+      // Get the number of MetaEvidence updates
+      const metaEvidenceUpdates = await contract.methods
+        .metaEvidenceUpdates()
+        .call();
+
+      // Calculate the latest MetaEvidence IDs
+      // From the contract: registration = 2 * updates, clearing = 2 * updates + 1
+      const latestRegistrationId = 2 * (Number(metaEvidenceUpdates) - 1);
+      const latestClearingId = latestRegistrationId + 1;
+
+      // Get past events for both MetaEvidence types
+      const events = await contract.getPastEvents("MetaEvidence", {
+        filter: {
+          _metaEvidenceID: [latestRegistrationId, latestClearingId],
+        },
+        fromBlock: 0,
+      });
+
+      // Find the specific events
+      const registrationEvent = events.find(
+        (e: { returnValues: { _metaEvidenceID: string } }) =>
+          e.returnValues._metaEvidenceID === latestRegistrationId.toString()
+      );
+      const clearingEvent = events.find(
+        (e: { returnValues: { _metaEvidenceID: string } }) =>
+          e.returnValues._metaEvidenceID === latestClearingId.toString()
+      );
+
+      if (!registrationEvent || !clearingEvent) {
+        throw new Error("Could not find latest MetaEvidence events");
+      }
+
+      return {
+        registrationMetaEvidence: registrationEvent.returnValues._evidence,
+        clearingMetaEvidence: clearingEvent.returnValues._evidence,
+      };
+    } catch (error: any) {
+      console.error("Error fetching MetaEvidence:", error);
+      throw new Error(`Failed to fetch MetaEvidence: ${error.message}`);
+    }
+  };
 }

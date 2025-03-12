@@ -204,4 +204,12 @@ export declare class LightCurateRegistry {
      * @returns Transaction hash of the appeal funding
      */
     fundAppeal: (itemID: string, requestID: number | undefined, side: 1 | 2, amount?: string) => Promise<string>;
+    /**
+     * Gets the latest MetaEvidence URIs for both registration and clearing requests
+     * @returns Promise resolving to an object containing both MetaEvidence URIs
+     */
+    getLatestMetaEvidence: () => Promise<{
+        registrationMetaEvidence: string;
+        clearingMetaEvidence: string;
+    }>;
 }
