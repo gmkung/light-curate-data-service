@@ -19,7 +19,7 @@
     "curate",
     "web3"
   ],
-  "author": "",
+  "author": "Guangmian Kung",
   "license": "MIT",
   "dependencies": {
     "axios": "^1.6.0",
