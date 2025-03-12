@@ -1412,35 +1412,84 @@ export class LightCurateRegistry {
       const web3 = await this.getWeb3();
       const contract = await this.getContract();
 
+      console.log("Getting MetaEvidence updates...");
       // Get the number of MetaEvidence updates
       const metaEvidenceUpdates = await contract.methods
         .metaEvidenceUpdates()
         .call();
+      console.log("MetaEvidence updates:", metaEvidenceUpdates);
 
       // Calculate the latest MetaEvidence IDs
-      // From the contract: registration = 2 * updates, clearing = 2 * updates + 1
       const latestRegistrationId = 2 * (Number(metaEvidenceUpdates) - 1);
       const latestClearingId = latestRegistrationId + 1;
+      console.log("Latest registration ID:", latestRegistrationId);
+      console.log("Latest clearing ID:", latestClearingId);
 
       // Get past events for both MetaEvidence types
+      console.log("Fetching past MetaEvidence events...");
       const events = await contract.getPastEvents("MetaEvidence", {
-        filter: {
-          _metaEvidenceID: [latestRegistrationId, latestClearingId],
-        },
         fromBlock: 0,
+      });
+      console.log(`Found ${events.length} MetaEvidence events total`);
+
+      // Log all events for inspection
+      events.forEach((e: { returnValues: { _metaEvidenceID: string; _evidence: string } }, i: number) => {
+        console.log(
+          `Event ${i}: ID=${e.returnValues._metaEvidenceID}, Evidence=${e.returnValues._evidence}`
+        );
       });
 
       // Find the specific events
+      console.log(
+        "Looking for registration event with ID:",
+        latestRegistrationId
+      );
       const registrationEvent = events.find(
-        (e: { returnValues: { _metaEvidenceID: string } }) =>
-          e.returnValues._metaEvidenceID === latestRegistrationId.toString()
+        (e: { returnValues: { _metaEvidenceID: string } }) => {
+          console.log(
+            `Comparing: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID}) with search ID "${latestRegistrationId.toString()}" (${typeof latestRegistrationId.toString()})`
+          );
+          return e.returnValues._metaEvidenceID == latestRegistrationId.toString();
+        }
       );
+      console.log("Registration event found:", !!registrationEvent);
+
+      console.log("Looking for clearing event with ID:", latestClearingId);
       const clearingEvent = events.find(
-        (e: { returnValues: { _metaEvidenceID: string } }) =>
-          e.returnValues._metaEvidenceID === latestClearingId.toString()
+        (e: { returnValues: { _metaEvidenceID: string } }) => {
+          console.log(
+            `Comparing: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID}) with search ID "${latestClearingId.toString()}" (${typeof latestClearingId.toString()})`
+          );
+          return e.returnValues._metaEvidenceID == latestClearingId.toString();
+        }
       );
+      console.log("Clearing event found:", !!clearingEvent);
 
       if (!registrationEvent || !clearingEvent) {
+        // If specific events not found, let's try to use the first pair
+        if (events.length >= 2) {
+          console.log(
+            "Specific events not found. Attempting to use the first registration and clearing events..."
+          );
+          const firstEvents = events.filter(
+            (e: { returnValues: { _metaEvidenceID: string } }) => {
+              console.log(
+                `Filtering: event ID "${e.returnValues._metaEvidenceID}" (${typeof e.returnValues._metaEvidenceID})`
+              );
+              return e.returnValues._metaEvidenceID == "0" || 
+                     e.returnValues._metaEvidenceID == "1";
+            }
+          );
+          console.log(`Found ${firstEvents.length} initial events`);
+
+          if (firstEvents.length >= 2) {
+            return {
+              registrationMetaEvidence: firstEvents[0].returnValues._evidence,
+              clearingMetaEvidence: firstEvents[1].returnValues._evidence,
+            };
+          }
+        }
+
         throw new Error("Could not find latest MetaEvidence events");
       }
 
