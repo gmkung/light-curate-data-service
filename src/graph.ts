@@ -10,8 +10,8 @@ const itemsCache = new Map<string, LItem[]>();
 
 // Default subgraph URLs by chain
 const SUBGRAPH_URLS = {
-  1: "https://gateway.thegraph.com/api/73380b22a17017c081123ec9c0e34677/subgraphs/id/A5oqWboEuDezwqpkaJjih4ckGhoHRoXZExqUbja2k1NQ", // Ethereum Mainnet
-  100: "https://gateway.thegraph.com/api/73380b22a17017c081123ec9c0e34677/subgraphs/id/9hHo5MpjpC1JqfD3BsgFnojGurXRHTrHWcUcZPPCo6m8", // Gnosis Chain
+  1: "https://gateway.thegraph.com/api/500a3f85051f0de7a90d155df163a09b/subgraphs/id/A5oqWboEuDezwqpkaJjih4ckGhoHRoXZExqUbja2k1NQ", // Ethereum Mainnet
+  100: "https://gateway.thegraph.com/api/500a3f85051f0de7a90d155df163a09b/subgraphs/id/9hHo5MpjpC1JqfD3BsgFnojGurXRHTrHWcUcZPPCo6m8", // Gnosis Chain
 };
 
 // Common item fields to query
